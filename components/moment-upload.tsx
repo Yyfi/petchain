@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Upload, Loader2, ImageIcon, Trash2, CheckCircle2, Circle } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import { translations } from "@/lib/translations"
+import { uploadToPinata, addMomentNFT } from "@/lib/web3-contract"
+import { ethers } from "ethers"
 
 interface MomentUploadProps {
   walletAddress: string
@@ -27,6 +29,8 @@ interface PetMoment {
   imageData: string
   createdAt: string
   walletAddress: string
+  txHash?: string
+  isOnChain?: boolean
 }
 
 export function MomentUpload({ walletAddress, onMomentUploaded }: MomentUploadProps) {
@@ -40,10 +44,29 @@ export function MomentUpload({ walletAddress, onMomentUploaded }: MomentUploadPr
   const [preview, setPreview] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [uploadError, setUploadError] = useState("")
   const [moments, setMoments] = useState<PetMoment[]>([])
   const [pets, setPets] = useState<PetNFT[]>([])
   const [selectedMoments, setSelectedMoments] = useState<Set<string>>(new Set())
   const [isDeleteMode, setIsDeleteMode] = useState(false)
+  const [lastTxHash, setLastTxHash] = useState("")
+  const [signer, setSigner] = useState<any>(null)
+
+  useEffect(() => {
+    const connectWeb3 = async () => {
+      try {
+        if (window.ethereum) {
+          const web3Provider = new ethers.providers.Web3Provider(window.ethereum)
+          const web3Signer = web3Provider.getSigner()
+          setSigner(web3Signer)
+        }
+      } catch (error) {
+        console.error("Error connecting Web3:", error)
+      }
+    }
+
+    connectWeb3()
+  }, [])
 
   useEffect(() => {
     const loadData = () => {
@@ -92,6 +115,9 @@ export function MomentUpload({ walletAddress, onMomentUploaded }: MomentUploadPr
     }
 
     setIsUploading(true)
+    setUploadError("")
+    let txHash = ""
+
     try {
       const imageData = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
@@ -110,7 +136,26 @@ export function MomentUpload({ walletAddress, onMomentUploaded }: MomentUploadPr
         reader.readAsDataURL(image)
       })
 
-      const newMoment = {
+      // Try to upload to blockchain
+      let isOnChain = false
+      const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT
+      
+      if (pinataJwt && window.ethereum && signer) {
+        try {
+          // Upload image to IPFS
+          const imageURI = await uploadToPinata(image, pinataJwt)
+          
+          // Call addMoment on blockchain
+          txHash = await addMomentNFT(petId, imageURI, description, signer)
+          isOnChain = true
+          setLastTxHash(txHash)
+        } catch (blockchainError) {
+          console.warn("Blockchain upload failed, saving locally only:", blockchainError)
+          setUploadError("Moment saved locally, but blockchain upload failed. Make sure you're on Base network.")
+        }
+      }
+
+      const newMoment: PetMoment = {
         id: `moment-${Date.now()}`,
         petId,
         title,
@@ -118,6 +163,8 @@ export function MomentUpload({ walletAddress, onMomentUploaded }: MomentUploadPr
         imageData,
         createdAt: new Date().toISOString(),
         walletAddress,
+        txHash,
+        isOnChain,
       }
 
       const savedMoments = localStorage.getItem("petMoments")
@@ -138,9 +185,10 @@ export function MomentUpload({ walletAddress, onMomentUploaded }: MomentUploadPr
         onMomentUploaded()
       }
 
-      setTimeout(() => setUploadSuccess(false), 3000)
+      setTimeout(() => setUploadSuccess(false), 5000)
     } catch (error) {
       console.error("Error uploading moment:", error)
+      setUploadError(String(error))
       alert(t.failedToUploadMoment)
     } finally {
       setIsUploading(false)
