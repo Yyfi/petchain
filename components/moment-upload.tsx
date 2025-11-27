@@ -139,13 +139,21 @@ export function MomentUpload({ walletAddress, onMomentUploaded }: MomentUploadPr
       // Try to upload to blockchain
       let isOnChain = false
       const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT
+      let imageURI = imageData // 默认使用本地 Base64 数据
       
-      if (pinataJwt && window.ethereum && signer) {
+      if (window.ethereum && signer) {
         try {
-          // Upload image to IPFS
-          const imageURI = await uploadToPinata(image, pinataJwt)
+          // 如果有 Pinata JWT，优先上传到 IPFS
+          if (pinataJwt && image) {
+            try {
+              imageURI = await uploadToPinata(image, pinataJwt)
+            } catch (ipfsError) {
+              console.warn("IPFS upload failed, using local data:", ipfsError)
+              // 继续使用本地数据
+            }
+          }
           
-          // Call addMoment on blockchain
+          // 调用合约生成 NFT（无论是否有 IPFS URI）
           txHash = await addMomentNFT(petId, imageURI, description, signer)
           isOnChain = true
           setLastTxHash(txHash)
