@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mint Pet Identity NFT</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Ethers v5 -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-amber-50 to-orange-50 flex justify-center py-10 min-h-screen">
+
+<div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-4xl border-t-4 border-amber-300">
+
+    <!-- 标题 -->
+    <h1 class="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent mb-1">🐶 Mint Your Pet Identity NFT</h1>
+    <p class="text-amber-600 mb-6 font-medium">Create a permanent on-chain identity for your pet</p>
+
+    <!-- Connect Wallet -->
+    <button id="connectBtn"
+            class="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl shadow-md hover:from-amber-600 hover:to-orange-600 transition font-semibold">
+        Connect Wallet
+    </button>
+    <p id="walletAddress" class="text-sm text-amber-700 mt-2 font-medium"></p>
+
+    <h2 class="text-2xl font-bold text-amber-900 mt-10 mb-4">🐾 My Pets</h2>
+    <div id="myPetsContainer" class="space-y-4"></div>
+
+    <hr class="my-8 border-amber-200">
+
+    <!-- Pet Info -->
+    <h2 class="text-2xl font-semibold text-amber-900 mb-6">📝 Pet Information</h2>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <input id="petName" placeholder="Pet Name" class="input">
+        <input id="species" placeholder="Species (Dog / Cat)" class="input">
+        <input id="breed" placeholder="Breed" class="input">
+        <input id="birthday" type="date" class="input">
+        <input id="traits" placeholder="Traits (Cute, Active...)" class="input">
+        <input id="city" placeholder="City" class="input">
+    </div>
+
+    <!-- Upload Image -->
+    <div class="mb-6">
+        <p class="font-semibold text-amber-900 mb-3">📸 Upload Pet Image</p>
+        <label class="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 px-6 py-10 transition hover:border-amber-400 hover:bg-amber-100">
+            <input type="file" id="imageInput" accept="image/*" class="hidden">
+            <div class="text-center">
+                <p class="text-amber-600 font-medium">Click to upload or drag and drop</p>
+                <p class="text-xs text-amber-500">PNG, JPG, GIF up to 5MB</p>
+            </div>
+        </label>
+        <div id="imagePreview" class="mt-3 hidden">
+            <img id="imageThumbnail" class="max-h-32 rounded-lg border border-amber-200">
+        </div>
+    </div>
+
+    <!-- Mint Button -->
+    <button id="mintBtn"
+            class="w-full py-4 text-white bg-gradient-to-r from-amber-600 to-orange-500 rounded-xl shadow-md hover:from-amber-700 hover:to-orange-600 transition font-semibold text-lg">
+        Mint Pet NFT
+    </button>
+
+    <p id="status" class="mt-4 text-amber-900 text-center font-medium"></p>
+
+    <hr class="my-8 border-amber-200">
+
+    <h2 class="text-3xl font-bold text-amber-900 mb-6">📸 Pet Moments</h2>
+    <div class="space-y-6">
+        <div>
+            <p class="font-semibold text-amber-900 mb-3">Select Your Pet</p>
+            <select id="momentTokenSelect" class="input w-full">
+                <option value="">Connect wallet to select a pet</option>
+            </select>
+        </div>
+
+        <div id="selectedPetInfo" class="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-dashed border-amber-300 rounded-2xl p-6 text-amber-700 text-sm">
+            Connect wallet to load your pet information.
+        </div>
+
+        <div class="bg-white border border-amber-200 rounded-2xl p-6 shadow-sm">
+            <p class="font-semibold text-amber-900 mb-4 text-lg">Create a New Moment</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-amber-900 mb-2">Photo</label>
+                    <label class="flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-amber-300 bg-amber-50 px-6 py-8 transition hover:border-amber-400 hover:bg-amber-100">
+                        <input type="file" id="momentImageInput" accept="image/*" class="hidden">
+                        <div class="text-center">
+                            <p class="text-amber-600">Click to upload</p>
+                        </div>
+                    </label>
+                    <div id="momentImagePreview" class="mt-2 hidden">
+                        <img id="momentImageThumbnail" class="max-h-24 rounded-lg border border-amber-200">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-amber-900 mb-2">Description</label>
+                    <textarea id="momentDescription" rows="3"
+                              class="w-full text-sm text-amber-900 border border-amber-300 rounded-lg p-3 bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition"
+                              placeholder="Write a little story about this moment..."></textarea>
+                </div>
+                <button id="publishMomentBtn"
+                        class="w-full py-3 text-white bg-gradient-to-r from-amber-600 to-orange-500 rounded-lg shadow-md hover:from-amber-700 hover:to-orange-600 transition font-semibold">
+                    Publish Moment
+                </button>
+                <p id="momentStatus" class="text-sm text-amber-700 font-medium"></p>
+            </div>
+        </div>
+
+        <div>
+            <p class="font-semibold text-amber-900 mb-4 text-lg flex items-center gap-2">
+                Moments Gallery
+                <span class="text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded-full">(On-chain verified)</span>
+            </p>
+            <div id="momentsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+    </div>
+
+</div>
+
+<div id="momentModal" class="hidden fixed inset-0 bg-black/50 z-10 flex items-center justify-center px-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-auto">
+        <button id="closeMomentModal" class="absolute right-4 top-4 text-amber-400 hover:text-amber-600 text-2xl font-bold">&times;</button>
+        <img id="modalMomentImage" class="w-full rounded-xl object-contain max-h-[60vh] mb-4 bg-amber-50" src="" alt="Moment detail">
+        <p id="modalMomentDescription" class="text-amber-900 mb-2 text-lg font-semibold"></p>
+        <p id="modalMomentTime" class="text-sm text-amber-600 font-medium"></p>
+    </div>
+</div>
+
+<!-- 自定义 Input 样式 -->
+<style>
+    .input {
+        padding: 12px;
+        border-radius: 10px;
+        border: 2px solid #fcd34d;
+        background: #fffbeb;
+        outline: none;
+        font-weight: 500;
+        color: #78350f;
+    }
+
+    .input::placeholder {
+        color: #b45309;
+        opacity: 0.7;
+    }
+
+    .input:focus {
+        border-color: #f59e0b;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .input:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    const CONTRACT_ADDRESS = "0x055acbcD634EFb87FF6819084527200A64846a31";
+    const PET_MOMENTS_ADDRESS = "0x514D64EB785724B932547BFE0ef8F12d3a533A47";
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJlZjk1ZWRhZS0zOTE2LTQyZDgtODRhMy0xZDU2YjdmZGY2MGEiLCJlbWFpbCI6ImJvd3V0aW5nQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI0Mzk1YmJkOWI2MTQ2NzAzZDJjNCIsInNjb3BlZEtleVNlY3JldCI6ImQyNDUzM2I5ZTJjOTJkN2Y3ODliYmJhYTBlN2E2NzI2ZTJiYjhhNzIyYTIxMzY2MDM0YTY5ZDA1Y2VjYjM4MDgiLCJleHAiOjE3OTUwNzE5MTV9.IrG3zq0gyqJ-7u9opkfhXSItbf20KW5aUAz8EJqmVLY";
+    const PINATA_FILE_ENDPOINT = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    const PINATA_METADATA_ENDPOINT = "https://api.pinata.cloud/pinning/pinJSONToIPFS";
+    const ABI = [
+        "function mintPet(string,string,string,uint64,string,string,string) external returns (uint256)",
+        "function tokenURI(uint256) view returns (string)",
+        "event PetMinted(uint256 indexed petId, address indexed owner)"
+    ];
+    const PET_MOMENTS_ABI = [
+        "function addMoment(uint256,string,string) external",
+        "function getAllMoments(uint256) view returns (tuple(string imageURI,string description,uint64 timestamp)[])"
+    ];
+
+    const momentTokenSelect = document.getElementById("momentTokenSelect");
+    const selectedPetInfo = document.getElementById("selectedPetInfo");
+    const momentImageInput = document.getElementById("momentImageInput");
+    const momentDescriptionInput = document.getElementById("momentDescription");
+    const momentStatus = document.getElementById("momentStatus");
+    const momentsGrid = document.getElementById("momentsGrid");
+    const momentModal = document.getElementById("momentModal");
+    const modalMomentImage = document.getElementById("modalMomentImage");
+    const modalMomentDescription = document.getElementById("modalMomentDescription");
+    const modalMomentTime = document.getElementById("modalMomentTime");
+
+    let provider, signer, contract, petMomentsContract;
+    let myPetIds = [];
+    let currentTokenId = "";
+    let currentMoments = [];
+
+    // Image preview for main upload
+    document.getElementById("imageInput").addEventListener("change", function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById("imageThumbnail").src = event.target.result;
+                document.getElementById("imagePreview").classList.remove("hidden");
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Image preview for moment upload
+    document.getElementById("momentImageInput").addEventListener("change", function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById("momentImageThumbnail").src = event.target.result;
+                document.getElementById("momentImagePreview").classList.remove("hidden");
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Connect Wallet
+    document.getElementById("connectBtn").onclick = async function () {
+        if (!window.ethereum) return alert("Install MetaMask!");
+
+        await ethereum.request({ method: "eth_requestAccounts" });
+
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+        petMomentsContract = new ethers.Contract(PET_MOMENTS_ADDRESS, PET_MOMENTS_ABI, signer);
+
+        document.getElementById("walletAddress").innerHTML =
+            "✓ Connected: " + await signer.getAddress();
+
+        await renderMyPets();
+    };
+
+    // Load all NFTs owned by current user
+    async function loadMyPets() {
+        if (!signer || !contract) return [];
+
+        const address = await signer.getAddress();
+        const filter = contract.filters.PetMinted(null, address);
+        const logs = await contract.queryFilter(filter);
+
+        return logs.map(log => log.args.petId.toString());
+    }
+
+    // Render pet cards
+    async function renderMyPets() {
+        const container = document.getElementById("myPetsContainer");
+        if (!container) return;
+
+        if (!contract) {
+            container.innerHTML = "<p class=\"text-amber-600 text-sm\">Connect wallet to load your pets.</p>";
+            return;
+        }
+
+        container.innerHTML = "Loading…";
+
+        try {
+            const petIds = await loadMyPets();
+            if (petIds.length === 0) {
+                container.innerHTML = "<p class=\"text-amber-600\">No pets found yet.</p>";
+                myPetIds = [];
+                populateMomentSelect();
+                updateSelectedPet(null, null);
+                return;
+            }
+
+            myPetIds = petIds;
+            populateMomentSelect();
+
+            let html = "";
+
+            for (let id of petIds) {
+                const metaJson = await fetchTokenMetadata(id);
+
+                html += `
+            <div class="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200 flex gap-4 items-center shadow-sm hover:shadow-md transition">
+                <img src="${ipfsToHttp(metaJson.image)}"
+                     class="w-20 h-20 rounded-lg object-cover border border-amber-300" />
+                <div>
+                    <p class="font-bold text-lg text-amber-900">${metaJson.name}</p>
+                    <p class="text-amber-700 text-sm">Token ID: ${id}</p>
+                </div>
+            </div>
+        `;
+            }
+
+            container.innerHTML = html;
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = "<p class=\"text-red-500\">Failed to load pets.</p>";
+        }
+    }
+
+    function ensurePinataJwt() {
+        if (!PINATA_JWT || PINATA_JWT === "PASTE_YOUR_PINATA_JWT_HERE") {
+            throw new Error("Please configure Pinata JWT");
+        }
+    }
+
+    async function pinataFetch(endpoint, options = {}) {
+        ensurePinataJwt();
+        const headers = {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${PINATA_JWT}`
+        };
+
+        const response = await fetch(endpoint, {
+            ...options,
+            headers
+        });
+
+        let data = null;
+        const text = await response.text();
+        if (text) {
+            try {
+                data = JSON.parse(text);
+            } catch (err) {
+                throw new Error("Invalid response from Pinata");
+            }
+        }
+
+        if (!response.ok) {
+            const message = data && (data.error || data.message);
+            throw new Error(message || "Pinata API failed");
+        }
+
+        if (!data) {
+            throw new Error("Empty response from Pinata");
+        }
+
+        return data;
+    }
+
+    // Upload Image
+    async function uploadImageToPinata(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const data = await pinataFetch(PINATA_FILE_ENDPOINT, {
+            method: "POST",
+            body: formData
+        });
+
+        if (!data.IpfsHash) {
+            throw new Error("Pinata upload missing IpfsHash");
+        }
+
+        return `ipfs://${data.IpfsHash}`;
+    }
+
+    function ipfsToHttp(uri) {
+        return uri ? uri.replace("ipfs://", "https://ipfs.io/ipfs/") : "";
+    }
+
+    async function fetchTokenMetadata(tokenId) {
+        const tokenURI = await contract.tokenURI(tokenId);
+        const metadata = await fetch(ipfsToHttp(tokenURI));
+        return metadata.json();
+    }
+
+    function populateMomentSelect() {
+        if (!momentTokenSelect) return;
+        const previousSelection = momentTokenSelect.value;
+
+        momentTokenSelect.innerHTML = "";
+
+        if (!myPetIds.length) {
+            momentTokenSelect.innerHTML = '<option value="">No pets available</option>';
+            currentTokenId = "";
+            momentsGrid.innerHTML = '<p class="text-sm text-amber-600">No pet selected</p>';
+            return;
+        }
+
+        momentTokenSelect.innerHTML = '<option value="">Select a pet</option>';
+        myPetIds.forEach(id => {
+            const opt = document.createElement("option");
+            opt.value = id;
+            opt.textContent = `Pet #${id}`;
+            momentTokenSelect.appendChild(opt);
+        });
+
+        const defaultId = myPetIds.includes(previousSelection) ? previousSelection : myPetIds[0];
+        momentTokenSelect.value = defaultId || "";
+        if (defaultId) {
+            handleTokenSelection(defaultId);
+        }
+    }
+
+    async function handleTokenSelection(tokenId) {
+        currentTokenId = tokenId;
+        if (!tokenId) {
+            updateSelectedPet(null, null);
+            momentsGrid.innerHTML = '<p class="text-sm text-amber-600">Please select a pet to view moments.</p>';
+            return;
+        }
+
+        try {
+            selectedPetInfo.innerHTML = "Loading metadata…";
+            const meta = await fetchTokenMetadata(tokenId);
+            updateSelectedPet(meta, tokenId);
+            await renderMoments(tokenId);
+        } catch (err) {
+            console.error(err);
+            selectedPetInfo.innerHTML = '<p class="text-red-500 text-sm">Failed to load pet information</p>';
+        }
+    }
+
+    function updateSelectedPet(meta, tokenId) {
+        if (!selectedPetInfo) return;
+
+        if (!meta || !tokenId) {
+            selectedPetInfo.innerHTML = '<p class="text-amber-600 text-sm">Please select a pet to view details.</p>';
+            return;
+        }
+
+        selectedPetInfo.innerHTML = `
+            <div class="flex gap-4 items-center">
+                <img src="${ipfsToHttp(meta.image)}" class="w-24 h-24 rounded-lg object-cover border border-amber-300">
+                <div>
+                    <p class="text-lg font-bold text-amber-900">${meta.name}</p>
+                    <p class="text-sm text-amber-700">Token ID: ${tokenId}</p>
+                    <p class="text-sm text-amber-600 mt-1">${meta.description || ""}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    async function renderMoments(tokenId) {
+        if (!momentsGrid) return;
+        if (!petMomentsContract) {
+            momentsGrid.innerHTML = '<p class="text-sm text-amber-600">Connect wallet first</p>';
+            return;
+        }
+
+        momentsGrid.innerHTML = '<p class="text-sm text-amber-600">Loading moments…</p>';
+
+        try {
+            const moments = await loadMoments(tokenId);
+            currentMoments = moments;
+
+            if (!moments.length) {
+                momentsGrid.innerHTML = '<p class="text-sm text-amber-600">No moments yet. Create the first one!</p>';
+                return;
+            }
+
+            let html = "";
+            moments.forEach((moment, index) => {
+                html += `
+                    <div class="bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer border border-amber-200 overflow-hidden" data-moment-index="${index}">
+                        <div class="w-full bg-amber-50 rounded-t-lg overflow-hidden flex items-center justify-center h-40">
+                            <img src="${ipfsToHttp(moment.imageURI)}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="p-4">
+                            <p class="text-amber-900 font-semibold truncate">${moment.description || "No description"}</p>
+                            <p class="text-xs text-amber-600 mt-1">${formatTimestamp(moment.timestamp)}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            momentsGrid.innerHTML = html;
+            momentsGrid.querySelectorAll("[data-moment-index]").forEach(card => {
+                card.addEventListener("click", () => {
+                    const idx = parseInt(card.getAttribute("data-moment-index"), 10);
+                    openMomentModal(currentMoments[idx]);
+                });
+            });
+        } catch (err) {
+            console.error(err);
+            momentsGrid.innerHTML = '<p class="text-sm text-red-500">Failed to load moments</p>';
+        }
+    }
+
+    async function loadMoments(tokenId) {
+        if (!petMomentsContract) return [];
+        const moments = await petMomentsContract.getAllMoments(tokenId);
+        return moments.map(m => ({
+            imageURI: m.imageURI,
+            description: m.description,
+            timestamp: m.timestamp.toNumber ? m.timestamp.toNumber() : Number(m.timestamp)
+        }));
+    }
+
+    function formatTimestamp(ts) {
+        if (!ts) return "";
+        return new Date(Number(ts) * 1000).toLocaleString();
+    }
+
+    function openMomentModal(moment) {
+        if (!moment) return;
+        modalMomentImage.src = ipfsToHttp(moment.imageURI);
+        modalMomentDescription.textContent = moment.description || "No description";
+        modalMomentTime.textContent = formatTimestamp(moment.timestamp);
+        momentModal.classList.remove("hidden");
+    }
+
+    function closeMomentModal() {
+        momentModal.classList.add("hidden");
+    }
+
+    const closeMomentModalBtn = document.getElementById("closeMomentModal");
+    if (closeMomentModalBtn) {
+        closeMomentModalBtn.addEventListener("click", closeMomentModal);
+    }
+    if (momentModal) {
+        momentModal.addEventListener("click", function (event) {
+            if (event.target === momentModal) {
+                closeMomentModal();
+            }
+        });
+    }
+
+    if (momentTokenSelect) {
+        momentTokenSelect.addEventListener("change", async function () {
+            await handleTokenSelection(this.value);
+        });
+    }
+
+    document.getElementById("publishMomentBtn").onclick = async function () {
+        if (!petMomentsContract) return alert("Connect wallet first");
+
+        const tokenId = momentTokenSelect.value;
+        if (!tokenId) return alert("Please select a pet");
+
+        const file = momentImageInput.files[0];
+        if (!file) return alert("Please upload a photo");
+
+        const description = momentDescriptionInput.value.trim();
+        if (!description) return alert("Please write a description");
+
+        try {
+            momentStatus.innerHTML = "Uploading image…";
+            const imageURI = await uploadImageToPinata(file);
+
+            momentStatus.innerHTML = "Submitting to blockchain…";
+            const tx = await petMomentsContract.addMoment(tokenId, imageURI, description);
+            await tx.wait();
+
+            momentStatus.innerHTML = "✅ Moment published!";
+            momentImageInput.value = "";
+            momentDescriptionInput.value = "";
+            document.getElementById("momentImagePreview").classList.add("hidden");
+
+            await renderMoments(tokenId);
+        } catch (err) {
+            console.error(err);
+            momentStatus.innerHTML = "❌ Failed: " + err.message;
+        }
+    };
+
+    // Upload metadata
+    async function uploadMetadata(metadata) {
+        const data = await pinataFetch(PINATA_METADATA_ENDPOINT, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(metadata)
+        });
+
+        if (!data.IpfsHash) {
+            throw new Error("Pinata upload missing IpfsHash");
+        }
+
+        return `ipfs://${data.IpfsHash}`;
+    }
+
+    // Mint
+    document.getElementById("mintBtn").onclick = async function () {
+        try {
+            const petName = document.getElementById("petName");
+            const species = document.getElementById("species");
+            const breed = document.getElementById("breed");
+            const birthday = document.getElementById("birthday");
+            const traits = document.getElementById("traits");
+            const city = document.getElementById("city");
+            const imageInput = document.getElementById("imageInput");
+            const status = document.getElementById("status");
+
+            const name = petName.value;
+            const speciesValue = species.value;
+            const breedValue = breed.value;
+            const traitsValue = traits.value;
+            const cityValue = city.value;
+
+            if (!name || !speciesValue || !breedValue || !birthday.value || !cityValue) {
+                return alert("Please fill all required fields");
+            }
+
+            const birthdayTimestamp = Math.floor(new Date(birthday.value).getTime() / 1000);
+            const file = imageInput.files[0];
+            if (!file) return alert("Please upload an image!");
+
+            status.innerHTML = "Uploading image to IPFS…";
+            const imageCID = await uploadImageToPinata(file);
+
+            const metadata = {
+                name,
+                description: "Pet identity NFT",
+                image: imageCID,
+                attributes: [
+                    { trait_type: "Species", value: speciesValue },
+                    { trait_type: "Breed", value: breedValue },
+                    { trait_type: "Birthday", value: birthdayTimestamp },
+                    { trait_type: "Traits", value: traitsValue },
+                    { trait_type: "City", value: cityValue }
+                ]
+            };
+
+            status.innerHTML = "Uploading metadata…";
+            const metadataCID = await uploadMetadata(metadata);
+
+            status.innerHTML = "Minting NFT on blockchain…";
+
+            const tx = await contract.mintPet(
+                name,
+                speciesValue,
+                breedValue,
+                birthdayTimestamp,
+                traitsValue,
+                cityValue,
+                metadataCID
+            );
+
+            await tx.wait();
+
+            status.innerHTML = "🎉 Mint Success! Transaction: " + tx.hash;
+            petName.value = "";
+            species.value = "";
+            breed.value = "";
+            birthday.value = "";
+            traits.value = "";
+            city.value = "";
+            imageInput.value = "";
+            document.getElementById("imagePreview").classList.add("hidden");
+
+            await renderMyPets();
+
+        } catch (err) {
+            status.innerHTML = "❌ Error: " + err.message;
+            console.error(err);
+        }
+    };
+
+</script>
+
+</body>
+</html>
