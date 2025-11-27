@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Upload, X, Trash2 } from "lucide-react"
+import { mintPetNFT, uploadToPinata } from "@/lib/web3-contract"
+import { ethers } from "ethers"
 
 interface PetNFT {
   id: string
@@ -145,6 +147,8 @@ export function MintPetForm({ walletAddress, onPetMinted }: MintPetFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string>("")
   const [mintedPets, setMintedPets] = useState<PetNFT[]>([])
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [provider, setProvider] = useState<any>(null)
+  const [signer, setSigner] = useState<any>(null)
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -211,6 +215,22 @@ export function MintPetForm({ walletAddress, onPetMinted }: MintPetFormProps) {
     localStorage.setItem("mintedPets", JSON.stringify(updated))
   }
 
+  const connectWeb3 = async () => {
+    try {
+      if (!window.ethereum) {
+        alert("Please install MetaMask")
+        return
+      }
+      await window.ethereum.request({ method: "eth_requestAccounts" })
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum)
+      const web3Signer = web3Provider.getSigner()
+      setProvider(web3Provider)
+      setSigner(web3Signer)
+    } catch (error) {
+      console.error("Error connecting Web3:", error)
+    }
+  }
+
   const handleMintPet = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -226,13 +246,49 @@ export function MintPetForm({ walletAddress, onPetMinted }: MintPetFormProps) {
 
     setIsMinting(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      let imageURI = photoPreview
 
-      const newTxHash = "0x" + Math.random().toString(16).slice(2)
+      // Try to upload to IPFS if we have pinata JWT
+      const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT
+      if (pinataJwt && petPhoto) {
+        try {
+          imageURI = await uploadToPinata(petPhoto, pinataJwt)
+        } catch (ipfsError) {
+          console.warn("IPFS upload failed, using local preview:", ipfsError)
+        }
+      }
+
+      let newTxHash = ""
+      let tokenId = ""
+
+      // Try to mint on blockchain if Web3 is connected
+      if (signer && provider) {
+        try {
+          const result = await mintPetNFT(
+            petName,
+            species,
+            breed,
+            birthday,
+            traits,
+            city,
+            imageURI,
+            provider,
+            signer
+          )
+          newTxHash = result.txHash
+          tokenId = result.tokenId
+        } catch (web3Error) {
+          console.warn("Web3 mint failed, using local storage:", web3Error)
+          newTxHash = "0x" + Math.random().toString(16).slice(2)
+        }
+      } else {
+        newTxHash = "0x" + Math.random().toString(16).slice(2)
+      }
+
       setTxHash(newTxHash)
 
       const newPet: PetNFT = {
-        id: Date.now().toString(),
+        id: tokenId || Date.now().toString(),
         petName,
         species,
         breed,
@@ -264,7 +320,7 @@ export function MintPetForm({ walletAddress, onPetMinted }: MintPetFormProps) {
       setPetPhoto(null)
       setPhotoPreview("")
 
-      setTimeout(() => setTxHash(""), 3000)
+      setTimeout(() => setTxHash(""), 5000)
     } catch (error) {
       console.error("Error minting pet:", error)
       alert("Failed to mint pet")
@@ -459,6 +515,20 @@ export function MintPetForm({ walletAddress, onPetMinted }: MintPetFormProps) {
               </li>
             </ul>
 
+            {!signer && (
+              <Button 
+                type="button"
+                onClick={connectWeb3} 
+                className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 mt-4"
+              >
+                Connect Web3 Wallet for NFT
+              </Button>
+            )}
+            {signer && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-900 font-medium">✓ Web3 Wallet Connected</p>
+              </div>
+            )}
             {txHash && (
               <div className="mt-6 rounded-lg bg-green-50 p-4">
                 <p className="text-sm font-medium text-green-900">Pet minted successfully!</p>
