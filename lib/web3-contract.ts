@@ -66,7 +66,10 @@ export async function mintPetNFT(
   try {
     const contract = new ethers.Contract(CONTRACT_ADDRESS, PET_ABI, signer)
 
-    const birthdayTimestamp = Math.floor(new Date(birthday).getTime() / 1000)
+    // Convert YYYY-MM-DD to UTC timestamp at noon UTC to avoid timezone issues
+    const [year, month, day] = birthday.split('-').map(Number)
+    const birthdayDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+    const birthdayTimestamp = Math.floor(birthdayDate.getTime() / 1000)
 
     const tx = await contract.mintPet(
       petName,
